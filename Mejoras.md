@@ -40,6 +40,80 @@ Las cards se generan en columna vertical (mobile-first por defecto), lo cual en 
 
 **Sugerencia:** Ajustar la instrucción para no generalizar "evitar el grid de cards" — el problema del primer componente era que las tres cards eran visualmente planas e idénticas, no que estuvieran en un grid. El layout horizontal con un tier visualmente dominante es una solución válida y preferible a una columna apilada.
 
+---
+
+## Integración con GitHub Actions (pendiente de implementar)
+
+Claude Code ofrece una integración oficial con GitHub que convierte al asistente en un miembro automatizado del equipo, capaz de responder menciones en issues/PRs y revisar pull requests automáticamente.
+
+### Setup
+
+1. Ejecutar `/install-github-app` en Claude Code (requiere API key configurada).
+2. El comando instala la GitHub App y genera un PR con los archivos de workflow en `.github/workflows/`.
+3. Al mergear ese PR, quedan activos los dos workflows por defecto.
+
+> **Nota:** El intento del 26/06/2026 falló con `API key is required`. Pendiente de reintentar con la key configurada.
+
+### Workflows disponibles
+
+**Mention workflow** — Se activa cuando alguien menciona `@claude` en un issue o PR. Claude analiza la solicitud, planifica tareas, ejecuta con acceso al codebase y responde en el hilo.
+
+**Pull Request review workflow** — Se activa automáticamente al abrir un PR. Claude revisa los cambios, analiza el impacto y publica un reporte detallado.
+
+### Configuración recomendada para este proyecto
+
+Una vez generado el PR inicial, personalizar los workflows con lo siguiente:
+
+**Setup previo al run de Claude:**
+```yaml
+- name: Project Setup
+  run: |
+    npm run setup
+    npm run dev:daemon
+```
+
+**Instrucciones contextuales para Claude:**
+```yaml
+custom_instructions: |
+  The project is already set up with all dependencies installed.
+  The server is already running at localhost:3000. Logs from it
+  are being written to logs.txt. If needed, you can query the
+  db with the 'sqlite3' cli. If needed, use the mcp__playwright
+  set of tools to launch a browser and interact with the app.
+```
+
+**Configuración del MCP server de Playwright:**
+```yaml
+mcp_config: |
+  {
+    "mcpServers": {
+      "playwright": {
+        "command": "npx",
+        "args": [
+          "@playwright/mcp@latest",
+          "--allowed-origins",
+          "localhost:3000;cdn.tailwindcss.com;esm.sh"
+        ]
+      }
+    }
+  }
+```
+
+**Permisos de herramientas** — A diferencia del entorno local, en GitHub Actions cada herramienta debe listarse explícitamente en `allowed_tools`. No hay shortcuts. Ejemplo:
+```yaml
+allowed_tools: "Bash(npm:*),Bash(sqlite3:*),mcp__playwright__browser_snapshot,mcp__playwright__browser_click,..."
+```
+
+### Próximos pasos
+
+- [ ] Configurar `ANTHROPIC_API_KEY` como secret en el repositorio de GitHub
+- [ ] Ejecutar `/install-github-app` nuevamente
+- [ ] Mergear el PR generado
+- [ ] Personalizar los workflows con la configuración de arriba
+- [ ] Probar con un issue simple mencionando `@claude`
+
+---
+
 ### 6. El modelo sigue resumiendo lo que hizo en el mensaje final
 El chat muestra: *"Done. Created a pricing card component with three tiers... The Pro tier is highlighted with a ring border and slight scale effect..."*. El prompt dice explícitamente que no resuma el trabajo a menos que el usuario lo pida.
 
